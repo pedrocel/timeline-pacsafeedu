@@ -1,0 +1,2342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacSafe Labs - Monitoramento de Presença Escolar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        dark: '#0F172A',
+                        light: '#F1F5F9'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        .bg-gradient {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        }
+        
+        .card-gradient {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        }
+        
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #3B82F6, #8B5CF6);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #8B5CF6;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .timeline-container::before {
+                left: 30px;
+            }
+            
+            .timeline-item::before {
+                left: 30px;
+            }
+        }
+        
+        .glow {
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+        }
+        
+        .blur-bg {
+            backdrop-filter: blur(8px);
+        }
+        
+        .tab-active {
+            border-bottom: 2px solid #8B5CF6;
+            color: #F1F5F9;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .hexagon {
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        }
+        
+        .logo-shield {
+            clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 50% 100%, 0% 75%);
+        }
+        
+        .gantt-bar {
+            height: 30px;
+            border-radius: 4px;
+            position: relative;
+            margin: 8px 0;
+        }
+        
+        .gantt-bar::after {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .server-icon {
+            position: relative;
+            width: 60px;
+            height: 80px;
+            margin: 0 auto;
+        }
+        
+        .server-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+            border-radius: 8px;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        .server-icon::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            height: 5px;
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 2px;
+            box-shadow: 0 15px 0 rgba(139, 92, 246, 0.5), 0 30px 0 rgba(139, 92, 246, 0.5), 0 45px 0 rgba(139, 92, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gradient text-light font-sans">
+    <!-- Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 z-50 flex items-center justify-center bg-dark bg-opacity-80 blur-bg">
+        <div class="bg-dark border border-accent/30 rounded-xl p-8 max-w-md w-full shadow-2xl glow">
+            <div class="text-center mb-6">
+                <!-- Logo PacSafe Labs no modal -->
+                <div class="w-20 h-20 mx-auto mb-4 relative">
+                    <div class="absolute inset-0 logo-shield bg-gradient-to-br from-primary to-accent opacity-20 animate-pulse"></div>
+                    <div class="absolute inset-0 logo-shield bg-dark border-2 border-accent/50 flex items-center justify-center">
+                        <span class="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">PL</span>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-bold text-light">Acesso Restrito</h2>
+                <p class="text-gray-400 mt-2">Digite a senha para acessar o projeto</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-400 mb-1">Senha</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-light">
+                    <p id="passwordError" class="text-red-500 text-sm mt-1 hidden">Senha incorreta. Tente novamente.</p>
+                </div>
+                <button id="submitPassword" class="w-full py-2 px-4 bg-accent hover:bg-accent/80 text-white font-medium rounded-lg transition duration-300 flex items-center justify-center">
+                    <span>Acessar</span>
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content (Hidden until password is verified) -->
+    <div id="mainContent" class="hidden">
+        <!-- Header/Hero Section -->
+        <header class="relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8">
+            <div class="absolute inset-0 z-0 opacity-20">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#8B5CF6,transparent)]"></div>
+                <div class="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-dark to-transparent"></div>
+            </div>
+            <div class="container mx-auto relative z-10">
+                <!-- Logo PacSafe Labs -->
+                <div class="flex justify-center mb-8">
+                    <div class="relative w-32 h-32">
+                        <div class="absolute inset-0 logo-shield bg-gradient-to-br from-primary to-accent opacity-20 animate-pulse"></div>
+                        <div class="absolute inset-0 logo-shield bg-dark/80 border-2 border-accent/50 flex flex-col items-center justify-center p-2">
+                            <span class="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">PacSafe</span>
+                            <span class="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-accent to-primary">LABS</span>
+                            <div class="w-12 h-1 bg-gradient-to-r from-primary to-accent mt-1 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center max-w-4xl mx-auto">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+                        Monitoramento de Presença Escolar
+                    </h1>
+                    <p class="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+                        Sistema inteligente para monitoramento de presença em tempo real utilizando tecnologia avançada de reconhecimento e análise de dados.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <a href="#roadmap" class="px-6 py-3 bg-primary hover:bg-primary/80 text-white font-medium rounded-lg transition duration-300">
+                            Ver Roadmap
+                        </a>
+                        <a href="#architecture" class="px-6 py-3 bg-dark border border-primary/50 hover:border-primary text-white font-medium rounded-lg transition duration-300">
+                            Arquitetura
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Architecture Section -->
+        <section id="architecture" class="py-16 px-4 sm:px-6 lg:px-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Arquitetura do Sistema</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Backend -->
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
+                                <i class="fas fa-server text-primary text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold">Backend</h3>
+                        </div>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Linguagens:</strong> Node.js (NestJS) ou GoLang</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Banco de Dados:</strong> PostgreSQL, MongoDB/DynamoDB, Redis</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Mensageria:</strong> RabbitMQ/Kafka</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Armazenamento:</strong> S3/GCS</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Autenticação:</strong> JWT, OAuth2, OpenID</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Frontend -->
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
+                                <i class="fas fa-desktop text-primary text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold">Frontend</h3>
+                        </div>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Framework:</strong> Angular com NgRx</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>UI/UX:</strong> TailwindCSS</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Componentes:</strong> Integração com API em tempo real</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Visualização:</strong> Dashboards interativos</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Responsividade:</strong> Mobile-first design</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Infraestrutura -->
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
+                                <i class="fas fa-network-wired text-primary text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold">Infraestrutura</h3>
+                        </div>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Contêineres:</strong> Kubernetes</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>API Gateway:</strong> Nginx/Kong</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Load Balancer:</strong> Distribuição de carga</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Monitoramento:</strong> Prometheus + Grafana</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>CI/CD:</strong> Pipeline automatizado</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Segurança -->
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
+                                <i class="fas fa-shield-alt text-primary text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold">Segurança</h3>
+                        </div>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Criptografia:</strong> End-to-end</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Compliance:</strong> LGPD/GDPR</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Auditoria:</strong> Logs de acesso</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Backups:</strong> Automáticos e redundantes</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                <span><strong>Testes:</strong> Penetração e vulnerabilidade</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Section -->
+        <section id="calculadora-custos" class="py-16 px-4 sm:px-6 lg:px-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Calculadora de Custos e Receitas</span>
+                </h2>
+                
+                <div class="card-gradient border border-primary/20 rounded-xl p-8 mb-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Coluna de Inputs -->
+                        <div>
+                            <h3 class="text-xl font-semibold mb-6 flex items-center">
+                                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-sliders-h text-primary"></i>
+                                </div>
+                                <span>Ajuste os Parâmetros</span>
+                            </h3>
+                            
+                            <div class="space-y-6">
+                                <!-- Custos de Infraestrutura -->
+                                <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                    <h4 class="text-lg font-semibold mb-4">Custos de Infraestrutura (por escola)</h4>
+                                    
+                                    <div class="space-y-4">
+                                        <div>
+                                            <div class="flex justify-between mb-1">
+                                                <label for="ec2-cost" class="text-sm font-medium">Computação (EC2)</label>
+                                                <span id="ec2-value" class="text-sm font-medium">R$ 175</span>
+                                            </div>
+                                            <input type="range" id="ec2-cost" min="150" max="200" value="175" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="flex justify-between mb-1">
+                                                <label for="rds-cost" class="text-sm font-medium">Banco de Dados (RDS)</label>
+                                                <span id="rds-value" class="text-sm font-medium">R$ 125</span>
+                                            </div>
+                                            <input type="range" id="rds-cost" min="100" max="150" value="125" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="flex justify-between mb-1">
+                                                <label for="s3-cost" class="text-sm font-medium">Armazenamento (S3)</label>
+                                                <span id="s3-value" class="text-sm font-medium">R$ 65</span>
+                                            </div>
+                                            <input type="range" id="s3-cost" min="50" max="80" value="65" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="flex justify-between mb-1">
+                                                <label for="cdn-cost" class="text-sm font-medium">CDN (CloudFront)</label>
+                                                <span id="cdn-value" class="text-sm font-medium">R$ 40</span>
+                                            </div>
+                                            <input type="range" id="cdn-cost" min="30" max="50" value="40" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="flex justify-between mb-1">
+                                                <label for="cache-cost" class="text-sm font-medium">Cache (ElastiCache)</label>
+                                                <span id="cache-value" class="text-sm font-medium">R$ 50</span>
+                                            </div>
+                                            <input type="range" id="cache-cost" min="40" max="60" value="50" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        
+                                        <div>
+                                            <div class="flex justify-between mb-1">
+                                                <label for="transfer-cost" class="text-sm font-medium">Transferência de Dados</label>
+                                                <span id="transfer-value" class="text-sm font-medium">R$ 40</span>
+                                            </div>
+                                            <input type="range" id="transfer-cost" min="30" max="50" value="40" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Preço do Software -->
+                                <div class="card-gradient border border-accent/20 rounded-xl p-6">
+                                    <h4 class="text-lg font-semibold mb-4">Preço do Software</h4>
+                                    
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="software-price" class="block text-sm font-medium mb-1">Valor mensal por escola (R$)</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">R$</span>
+                                                <input type="number" id="software-price" value="100" min="50" max="500" step="10" class="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-light">
+                                            </div>
+                                            <p class="text-xs text-gray-400 mt-1">Valor atual da licença de software: R$ 100 por escola</p>
+                                        </div>
+                                        
+                                        <div class="pt-2">
+                                            <p class="text-sm text-gray-300">Total de escolas em São Paulo: <span class="font-semibold text-accent">5.300</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Coluna de Resultados -->
+                        <div>
+                            <h3 class="text-xl font-semibold mb-6 flex items-center">
+                                <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-chart-line text-accent"></i>
+                                </div>
+                                <span>Resultados</span>
+                            </h3>
+                            
+                            <div class="space-y-6">
+                                <!-- Resumo Financeiro -->
+                                <div class="card-gradient border border-accent/20 rounded-xl p-6">
+                                    <h4 class="text-lg font-semibold mb-4">Resumo Financeiro Mensal</h4>
+                                    
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                                            <span class="text-gray-300">Custo por escola:</span>
+                                            <span id="total-cost-per-school" class="text-xl font-semibold text-primary">R$ 595</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-300">Receita potencial (5.300 escolas):</span>
+                                            <span id="total-revenue" class="text-xl font-semibold text-green-400">R$ 530.000</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-300">Custo de infraestrutura total:</span>
+                                            <span id="total-infra-cost" class="text-xl font-semibold text-red-400">R$ 3.153.500</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                                            <span class="text-gray-300">Custo de equipe (cenário normal):</span>
+                                            <span id="team-cost-normal" class="text-xl font-semibold text-red-400">R$ 25.000</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center pt-2">
+                                            <span class="text-gray-300 font-medium">Lucro potencial mensal:</span>
+                                            <span id="monthly-profit" class="text-2xl font-bold text-accent">R$ -2.648.500</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Projeções -->
+                                <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                    <h4 class="text-lg font-semibold mb-4">Projeções Financeiras</h4>
+                                    
+                                    <div class="grid grid-cols-3 gap-4">
+                                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                                            <h5 class="text-sm font-medium text-gray-400 mb-1">3 Meses</h5>
+                                            <p id="profit-3-months" class="text-lg font-semibold text-accent">R$ -7.945.500</p>
+                                        </div>
+                                        
+                                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                                            <h5 class="text-sm font-medium text-gray-400 mb-1">6 Meses</h5>
+                                            <p id="profit-6-months" class="text-lg font-semibold text-accent">R$ -15.891.000</p>
+                                        </div>
+                                        
+                                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                                            <h5 class="text-sm font-medium text-gray-400 mb-1">12 Meses</h5>
+                                            <p id="profit-12-months" class="text-lg font-semibold text-accent">R$ -31.782.000</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4 pt-4 border-t border-gray-700">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-300">Cenário de risco (equipe reduzida):</span>
+                                            <span id="risk-scenario-profit" class="text-sm font-medium text-accent">R$ -2.643.500/mês</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Análise de Viabilidade -->
+                                <div class="bg-dark/50 rounded-xl p-6 border border-accent/10">
+                                    <h4 class="text-lg font-semibold mb-4">Análise de Viabilidade</h4>
+                                    
+                                    <div class="space-y-3 text-sm">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-300">Ponto de equilíbrio:</span>
+                                            <span id="break-even" class="font-medium text-accent">31.785 escolas</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-300">% do mercado para equilíbrio:</span>
+                                            <span id="market-percentage" class="font-medium text-accent">599.7%</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-300">ROI (cenário normal):</span>
+                                            <span id="roi-normal" class="font-medium text-red-400">-83.9%</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-300">ROI (cenário de risco):</span>
+                                            <span id="roi-risk" class="font-medium text-red-400">-83.7%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4 pt-4 border-t border-gray-700">
+                                        <p id="recommendation" class="text-xs text-gray-400">
+                                            <strong>Recomendação:</strong> Com o preço atual, o projeto não é financeiramente viável. Considere aumentar o preço do software, reduzir custos de infraestrutura ou buscar um mercado maior que São Paulo.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de Comparação -->
+                <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                    <h3 class="text-xl font-semibold mb-6 text-center">Comparação de Cenários</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Cenário Normal -->
+                        <div class="bg-dark/50 rounded-xl p-6 border border-primary/10">
+                            <h4 class="text-lg font-semibold mb-4 text-primary">Cenário Normal</h4>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Equipe</span>
+                                        <span class="text-sm text-gray-300">12 profissionais</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-primary h-2.5 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Custo Mensal da Equipe</span>
+                                        <span class="text-sm text-gray-300">R$ 25.000</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-primary h-2.5 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Tempo de Desenvolvimento</span>
+                                        <span class="text-sm text-gray-300">6 meses</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-primary h-2.5 rounded-full" style="width: 60%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Qualidade do Produto</span>
+                                        <span class="text-sm text-gray-300">Alta</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-primary h-2.5 rounded-full" style="width: 90%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="pt-4 border-t border-gray-700">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-300">Lucro mensal projetado:</span>
+                                        <span id="normal-monthly-profit" class="text-lg font-semibold text-accent">R$ -2.648.500</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Cenário de Risco -->
+                        <div class="bg-dark/50 rounded-xl p-6 border border-accent/10">
+                            <h4 class="text-lg font-semibold mb-4 text-accent">Cenário de Risco</h4>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Equipe</span>
+                                        <span class="text-sm text-gray-300">9 profissionais</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-accent h-2.5 rounded-full" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Custo Mensal da Equipe</span>
+                                        <span class="text-sm text-gray-300">R$ 20.000</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-accent h-2.5 rounded-full" style="width: 80%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Tempo de Desenvolvimento</span>
+                                        <span class="text-sm text-gray-300">8-9 meses</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-accent h-2.5 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Qualidade do Produto</span>
+                                        <span class="text-sm text-gray-300">Média</span>
+                                    </div>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div class="bg-accent h-2.5 rounded-full" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="pt-4 border-t border-gray-700">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-300">Lucro mensal projetado:</span>
+                                        <span id="risk-monthly-profit" class="text-lg font-semibold text-accent">R$ -2.643.500</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nova Seção: Infraestrutura de Servidores -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8 bg-dark/50">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Infraestrutura de Servidores</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300 flex flex-col h-full">
+                        <div class="server-icon mb-6"></div>
+                        <h3 class="text-xl font-semibold text-center mb-4">Amazon Web Services (AWS)</h3>
+                        <div class="flex-grow">
+                            <ul class="space-y-3 text-gray-300 mb-6">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>EC2:</strong> Instâncias t3.medium para aplicação</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>RDS:</strong> PostgreSQL para banco de dados relacional</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>ElastiCache:</strong> Redis para cache e sessões</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>S3:</strong> Armazenamento de imagens e backups</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>CloudFront:</strong> CDN para distribuição de conteúdo</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="text-center mt-auto">
+                            <span class="inline-block px-3 py-1 bg-primary/20 text-primary text-sm rounded-full">Escolha recomendada</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300 flex flex-col h-full">
+                        <div class="server-icon mb-6"></div>
+                        <h3 class="text-xl font-semibold text-center mb-4">Google Cloud Platform (GCP)</h3>
+                        <div class="flex-grow">
+                            <ul class="space-y-3 text-gray-300 mb-6">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Compute Engine:</strong> VMs e2-standard-2</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Cloud SQL:</strong> PostgreSQL gerenciado</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Memorystore:</strong> Redis para cache</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Cloud Storage:</strong> Armazenamento de objetos</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Cloud CDN:</strong> Distribuição de conteúdo</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="text-center mt-auto">
+                            <span class="inline-block px-3 py-1 bg-gray-700 text-gray-300 text-sm rounded-full">Alternativa viável</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300 flex flex-col h-full">
+                        <div class="server-icon mb-6"></div>
+                        <h3 class="text-xl font-semibold text-center mb-4">Digital Ocean</h3>
+                        <div class="flex-grow">
+                            <ul class="space-y-3 text-gray-300 mb-6">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Droplets:</strong> Standard 4GB/2CPU</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Managed Databases:</strong> PostgreSQL</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Managed Redis:</strong> Cache e sessões</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Spaces:</strong> Armazenamento compatível com S3</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>CDN:</strong> Distribuição de conteúdo global</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="text-center mt-auto">
+                            <span class="inline-block px-3 py-1 bg-gray-700 text-gray-300 text-sm rounded-full">Opção econômica</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Justificativa da escolha -->
+                <div class="card-gradient border border-accent/20 rounded-xl p-6 mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Justificativa da Escolha: AWS</h3>
+                    <p class="text-gray-300 mb-4">
+                        Para o projeto de Monitoramento de Presença Escolar, recomendamos a AWS como plataforma de infraestrutura devido à sua robustez, escalabilidade e conjunto completo de serviços que atendem às necessidades específicas do projeto:
+                    </p>
+                    <ul class="space-y-2 text-gray-300">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                            <span><strong>Segurança avançada:</strong> Essencial para um sistema que lida com dados sensíveis de estudantes, a AWS oferece recursos de segurança de nível empresarial e conformidade com LGPD/GDPR.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                            <span><strong>Escalabilidade:</strong> Capacidade de escalar horizontalmente para atender ao crescimento do número de escolas no sistema.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                            <span><strong>Serviços especializados:</strong> Acesso a serviços como Amazon Rekognition para reconhecimento facial e Amazon Kinesis para processamento de streams de vídeo em tempo real.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                            <span><strong>Presença global:</strong> Infraestrutura distribuída que permite baixa latência para escolas em diferentes regiões.</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Estimativa de custos por escola -->
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-primary/20 to-accent/20 border-b border-gray-700">
+                                <th class="py-3 px-4 text-left text-sm font-semibold">Componente</th>
+                                <th class="py-3 px-4 text-left text-sm font-semibold">Custo Mensal por Escola</th>
+                                <th class="py-3 px-4 text-left text-sm font-semibold">Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">Computação (EC2)</td>
+                                <td class="py-3 px-4">R$ 150 - R$ 200</td>
+                                <td class="py-3 px-4">Instância compartilhada, alocação por escola</td>
+                            </tr>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">Banco de Dados (RDS)</td>
+                                <td class="py-3 px-4">R$ 100 - R$ 150</td>
+                                <td class="py-3 px-4">Instância compartilhada com isolamento lógico</td>
+                            </tr>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">Armazenamento (S3)</td>
+                                <td class="py-3 px-4">R$ 50 - R$ 80</td>
+                                <td class="py-3 px-4">Imagens, vídeos e backups</td>
+                            </tr>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">CDN (CloudFront)</td>
+                                <td class="py-3 px-4">R$ 30 - R$ 50</td>
+                                <td class="py-3 px-4">Distribuição de conteúdo estático</td>
+                            </tr>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">Cache (ElastiCache)</td>
+                                <td class="py-3 px-4">R$ 40 - R$ 60</td>
+                                <td class="py-3 px-4">Redis para performance</td>
+                            </tr>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">Transferência de Dados</td>
+                                <td class="py-3 px-4">R$ 30 - R$ 50</td>
+                                <td class="py-3 px-4">Tráfego de entrada/saída</td>
+                            </tr>
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td class="py-3 px-4">Licença de Software</td>
+                                <td class="py-3 px-4">R$ 100</td>
+                                <td class="py-3 px-4">Licença mensal por escola</td>
+                            </tr>
+                            <tr class="bg-gradient-to-r from-primary/10 to-accent/10 font-semibold">
+                                <td class="py-3 px-4">Total por Escola</td>
+                                <td class="py-3 px-4">R$ 500 - R$ 690</td>
+                                <td class="py-3 px-4">Custo mensal estimado</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-6 text-sm text-gray-400">
+                    <p>* Os valores são estimativas e podem variar de acordo com o volume de dados, número de alunos e requisitos específicos de cada escola.</p>
+                    <p>* Descontos por volume são aplicáveis para implementações em múltiplas escolas.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Structure Section -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Estrutura da Equipe</span>
+                </h2>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-tie text-accent text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold">Tech Lead</h3>
+                        <p class="text-gray-400 text-sm">1 profissional</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-code text-primary text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold">Backend Devs</h3>
+                        <p class="text-gray-400 text-sm">3 profissionais</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-laptop-code text-secondary text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold">Frontend Devs</h3>
+                        <p class="text-gray-400 text-sm">3 profissionais</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-server text-primary text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold">DevOps</h3>
+                        <p class="text-gray-400 text-sm">1 profissional</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-bug text-secondary text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold">QA Engineers</h3>
+                        <p class="text-gray-400 text-sm">2 profissionais</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-tasks text-accent text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold">PO & SM</h3>
+                        <p class="text-gray-400 text-sm">2 profissionais</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Personas Section -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8 bg-dark/50">
+            <div class="container mx-auto">
+                <!-- Dinâmica de Equipe -->
+                <div class="mt-16 card-gradient border border-accent/20 rounded-xl p-8">
+                    <h3 class="text-2xl font-semibold mb-6 text-center">Dinâmica de Equipe</h3>
+            
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-xl font-medium text-accent mb-4">Princípios de Trabalho</h4>
+                            <ul class="space-y-3 text-gray-300">
+                                <li class="flex items-start">
+                                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-comments text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Comunicação Transparente</p>
+                                        <p class="text-sm text-gray-400">Todos os membros da equipe devem manter comunicação clara e direta, compartilhando progresso e impedimentos nas dailies.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-users-cog text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Autonomia com Responsabilidade</p>
+                                        <p class="text-sm text-gray-400">Cada membro tem autonomia para tomar decisões técnicas em sua área, mas deve considerar o impacto no projeto como um todo.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-code-branch text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Revisão de Código</p>
+                                        <p class="text-sm text-gray-400">Todo código deve passar por revisão de pelo menos um outro desenvolvedor antes de ser integrado.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                
+                        <div>
+                            <h4 class="text-xl font-medium text-accent mb-4">Rituais da Equipe</h4>
+                            <ul class="space-y-3 text-gray-300">
+                                <li class="flex items-start">
+                                    <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-calendar-day text-accent"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Daily Standup (15 min)</p>
+                                        <p class="text-sm text-gray-400">Reunião diária às 9:30 para alinhamento de progresso, impedimentos e planos para o dia.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-tasks text-accent"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Sprint Planning (2h)</p>
+                                        <p class="text-sm text-gray-400">Planejamento quinzenal para definir escopo da sprint, estimar esforço e alocar tarefas.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-search text-accent"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Retrospectiva (1h)</p>
+                                        <p class="text-sm text-gray-400">Ao final de cada sprint para identificar pontos de melhoria e celebrar conquistas.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nova Seção: Gerenciamento de Projetos com ClickUp -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8 bg-dark/50">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Gerenciamento de Projetos com ClickUp</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+                    <div>
+                        <div class="card-gradient border border-primary/20 rounded-xl p-6 mb-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
+                                    <i class="fas fa-tasks text-primary text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold">Por que ClickUp?</h3>
+                            </div>
+                            <p class="text-gray-300 mb-4">
+                                A PacSafe Labs utiliza o ClickUp como plataforma central de gerenciamento de projetos, oferecendo uma solução completa que integra todas as necessidades do ciclo de desenvolvimento:
+                            </p>
+                            <ul class="space-y-2 text-gray-300">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Tudo em um só lugar:</strong> Tarefas, documentos, metas, sprints e comunicação centralizados.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Personalização:</strong> Fluxos de trabalho adaptados às necessidades específicas do projeto.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Integrações:</strong> Conexão com GitHub, Figma, Slack e outras ferramentas do ecossistema.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Automações:</strong> Redução de trabalho manual e padronização de processos.</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
+                                    <i class="fas fa-chart-line text-primary text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold">Benefícios para o Projeto</h3>
+                            </div>
+                            <ul class="space-y-2 text-gray-300">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Transparência:</strong> Visibilidade completa do progresso para stakeholders e equipe.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Agilidade:</strong> Implementação eficiente de metodologias ágeis (Scrum/Kanban).</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Colaboração:</strong> Facilidade para trabalho remoto e comunicação assíncrona.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Métricas:</strong> Dashboards e relatórios para acompanhamento de KPIs.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                    <span><strong>Documentação:</strong> Wiki integrada para manter toda a documentação atualizada.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient border border-accent/20 rounded-xl p-6 h-full">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mr-4">
+                                <i class="fas fa-sitemap text-accent text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold">Estrutura do Projeto no ClickUp</h3>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div class="bg-dark/50 rounded-lg p-4 border border-accent/10">
+                                <h4 class="font-semibold text-accent mb-2">Espaço: PacSafe Edu</h4>
+                                <div class="pl-4 border-l-2 border-accent/30">
+                                    <div class="mb-3">
+                                        <h5 class="font-medium text-primary">Pasta: Planejamento</h5>
+                                        <ul class="text-sm text-gray-400 pl-4">
+                                            <li>Lista: Requisitos</li>
+                                            <li>Lista: Arquitetura</li>
+                                            <li>Lista: Design System</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h5 class="font-medium text-primary">Pasta: Desenvolvimento</h5>
+                                        <ul class="text-sm text-gray-400 pl-4">
+                                            <li>Lista: Backlog</li>
+                                            <li>Lista: Sprint Atual</li>
+                                            <li>Lista: Code Review</li>
+                                            <li>Lista: QA</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h5 class="font-medium text-primary">Pasta: Operações</h5>
+                                        <ul class="text-sm text-gray-400 pl-4">
+                                            <li>Lista: Infraestrutura</li>
+                                            <li>Lista: DevOps</li>
+                                            <li>Lista: Monitoramento</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div>
+                                        <h5 class="font-medium text-primary">Pasta: Gestão</h5>
+                                        <ul class="text-sm text-gray-400 pl-4">
+                                            <li>Lista: Reuniões</li>
+                                            <li>Lista: Relatórios</li>
+                                            <li>Lista: Riscos</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-semibold mb-2">Visualizações Principais</h4>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-dark/50 rounded-lg p-3 border border-primary/10">
+                                        <p class="text-sm font-medium text-primary">Kanban</p>
+                                        <p class="text-xs text-gray-400">Fluxo de trabalho visual</p>
+                                    </div>
+                                    <div class="bg-dark/50 rounded-lg p-3 border border-primary/10">
+                                        <p class="text-sm font-medium text-primary">Gantt</p>
+                                        <p class="text-xs text-gray-400">Cronograma e dependências</p>
+                                    </div>
+                                    <div class="bg-dark/50 rounded-lg p-3 border border-primary/10">
+                                        <p class="text-sm font-medium text-primary">Calendário</p>
+                                        <p class="text-xs text-gray-400">Eventos e prazos</p>
+                                    </div>
+                                    <div class="bg-dark/50 rounded-lg p-3 border border-primary/10">
+                                        <p class="text-sm font-medium text-primary">Dashboard</p>
+                                        <p class="text-xs text-gray-400">Métricas e KPIs</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                    <h3 class="text-xl font-semibold mb-6 text-center">Fluxo de Trabalho no ClickUp</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-clipboard-list text-primary"></i>
+                            </div>
+                            <h4 class="font-medium text-primary mb-1">Backlog</h4>
+                            <p class="text-xs text-gray-400">Requisitos priorizados</p>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-tasks text-primary"></i>
+                            </div>
+                            <h4 class="font-medium text-primary mb-1">Em Progresso</h4>
+                            <p class="text-xs text-gray-400">Desenvolvimento ativo</p>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-code-branch text-primary"></i>
+                            </div>
+                            <h4 class="font-medium text-primary mb-1">Code Review</h4>
+                            <p class="text-xs text-gray-400">Revisão de código</p>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-vial text-primary"></i>
+                            </div>
+                            <h4 class="font-medium text-primary mb-1">QA</h4>
+                            <p class="text-xs text-gray-400">Testes e validação</p>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-4 border border-primary/10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-check-circle text-primary"></i>
+                            </div>
+                            <h4 class="font-medium text-primary mb-1">Concluído</h4>
+                            <p class="text-xs text-gray-400">Entregue e validado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Metodologia e Importância do Projeto -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Metodologia e Importância do Projeto</span>
+                </h2>
+                
+                <!-- Importância do Projeto -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+                                <i class="fas fa-star text-primary"></i>
+                            </div>
+                            <span>Importância do Projeto</span>
+                        </h3>
+                        
+                        <div class="space-y-6">
+                            <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                <h4 class="text-xl font-semibold mb-3 text-primary">Segurança Escolar Aprimorada</h4>
+                                <p class="text-gray-300">O monitoramento de presença em tempo real permite identificar rapidamente ausências não justificadas, contribuindo para a segurança dos alunos e tranquilidade dos pais. Em casos de emergência, o sistema fornece informações precisas sobre quem está presente no ambiente escolar.</p>
+                            </div>
+                            
+                            <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                <h4 class="text-xl font-semibold mb-3 text-primary">Otimização de Recursos Educacionais</h4>
+                                <p class="text-gray-300">Com dados precisos sobre frequência, as instituições podem otimizar a alocação de recursos, identificar padrões de ausência e implementar intervenções pedagógicas direcionadas, melhorando os resultados educacionais e reduzindo a evasão escolar.</p>
+                            </div>
+                            
+                            <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                <h4 class="text-xl font-semibold mb-3 text-primary">Transformação Digital da Educação</h4>
+                                <p class="text-gray-300">O projeto representa um passo importante na transformação digital do ambiente educacional, integrando tecnologias avançadas de reconhecimento e análise de dados para criar um ecossistema educacional mais eficiente, seguro e adaptado às necessidades do século XXI.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-center">
+                        <div class="relative w-full max-w-md">
+                            <div class="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl blur-xl"></div>
+                            <div class="relative grid grid-cols-2 gap-4">
+                                <div class="hexagon bg-primary/20 border border-primary/40 h-40 p-4 flex flex-col items-center justify-center text-center">
+                                    <i class="fas fa-shield-alt text-primary text-2xl mb-2"></i>
+                                    <h4 class="font-semibold">Segurança</h4>
+                                    <p class="text-xs text-gray-300">Monitoramento em tempo real</p>
+                                </div>
+                                
+                                <div class="hexagon bg-accent/20 border border-accent/40 h-40 p-4 flex flex-col items-center justify-center text-center mt-20">
+                                    <i class="fas fa-chart-line text-accent text-2xl mb-2"></i>
+                                    <h4 class="font-semibold">Análise</h4>
+                                    <p class="text-xs text-gray-300">Insights baseados em dados</p>
+                                </div>
+                                
+                                <div class="hexagon bg-secondary/20 border border-secondary/40 h-40 p-4 flex flex-col items-center justify-center text-center">
+                                    <i class="fas fa-graduation-cap text-secondary text-2xl mb-2"></i>
+                                    <h4 class="font-semibold">Educação</h4>
+                                    <p class="text-xs text-gray-300">Melhoria do aprendizado</p>
+                                </div>
+                                
+                                <div class="hexagon bg-primary/20 border border-primary/40 h-40 p-4 flex flex-col items-center justify-center text-center mt-20">
+                                    <i class="fas fa-clock text-primary text-2xl mb-2"></i>
+                                    <h4 class="font-semibold">Eficiência</h4>
+                                    <p class="text-xs text-gray-300">Automação de processos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Metodologia de Requisitos -->
+                <h3 class="text-2xl font-bold mb-8 flex items-center justify-center">
+                    <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mr-3">
+                        <i class="fas fa-clipboard-list text-accent"></i>
+                    </div>
+                    <span>Metodologia de Levantamento de Requisitos</span>
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div class="card-gradient border border-accent/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-users text-accent text-2xl"></i>
+                        </div>
+                        <h4 class="text-xl font-semibold text-center mb-4">Workshops Colaborativos</h4>
+                        <p class="text-gray-300 text-center">Sessões imersivas com stakeholders para identificar necessidades, expectativas e casos de uso prioritários. Utilizamos técnicas de Design Thinking e User Story Mapping para capturar requisitos de forma colaborativa e centrada no usuário.</p>
+                        <div class="mt-4 text-center">
+                            <span class="inline-block px-3 py-1 bg-accent/20 text-accent text-xs rounded-full">4 workshops planejados</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient border border-accent/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-chalkboard-teacher text-accent text-2xl"></i>
+                        </div>
+                        <h4 class="text-xl font-semibold text-center mb-4">Mentorias Especializadas</h4>
+                        <p class="text-gray-300 text-center">Sessões de mentoria com especialistas em educação, segurança e tecnologia para validar abordagens e garantir que o sistema atenda às melhores práticas e normas regulatórias do setor educacional.</p>
+                        <div class="mt-4 text-center">
+                            <span class="inline-block px-3 py-1 bg-accent/20 text-accent text-xs rounded-full">Mentoria contínua</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient border border-accent/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-sync-alt text-accent text-2xl"></i>
+                        </div>
+                        <h4 class="text-xl font-semibold text-center mb-4">Ciclos de Validação</h4>
+                        <p class="text-gray-300 text-center">Processo iterativo de validação de requisitos com protótipos e MVPs para garantir alinhamento com as necessidades reais dos usuários. Feedback contínuo é incorporado ao desenvolvimento.</p>
+                        <div class="mt-4 text-center">
+                            <span class="inline-block px-3 py-1 bg-accent/20 text-accent text-xs rounded-full">Sprints de 2 semanas</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Processo de Requisitos -->
+                <div class="card-gradient border border-primary/20 rounded-xl p-8">
+                    <h4 class="text-xl font-semibold mb-6 text-center">Processo de Levantamento e Gestão de Requisitos</h4>
+                    
+                    <div class="relative">
+                        <div class="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-accent"></div>
+                        
+                        <div class="space-y-8">
+                            <div class="relative pl-16">
+                                <div class="absolute left-6 w-4 h-4 rounded-full bg-primary transform -translate-x-1/2"></div>
+                                <h5 class="text-lg font-semibold text-primary mb-2">Imersão e Descoberta</h5>
+                                <p class="text-gray-300">Entrevistas com gestores escolares, professores, pais e alunos para compreender o contexto, desafios e oportunidades. Análise de sistemas existentes e benchmarking de soluções similares.</p>
+                            </div>
+                            
+                            <div class="relative pl-16">
+                                <div class="absolute left-6 w-4 h-4 rounded-full bg-primary/80 transform -translate-x-1/2"></div>
+                                <h5 class="text-lg font-semibold text-primary/80 mb-2">Definição e Priorização</h5>
+                                <p class="text-gray-300">Workshop de priorização com stakeholders para definir requisitos essenciais (MVP), importantes e desejáveis. Criação de user stories, critérios de aceitação e definição de DoD (Definition of Done).</p>
+                            </div>
+                            
+                            <div class="relative pl-16">
+                                <div class="absolute left-6 w-4 h-4 rounded-full bg-accent/80 transform -translate-x-1/2"></div>
+                                <h5 class="text-lg font-semibold text-accent/80 mb-2">Prototipagem e Validação</h5>
+                                <p class="text-gray-300">Criação de protótipos interativos para validação de fluxos e interfaces. Testes de usabilidade com usuários reais e coleta de feedback estruturado para refinamento dos requisitos.</p>
+                            </div>
+                            
+                            <div class="relative pl-16">
+                                <div class="absolute left-6 w-4 h-4 rounded-full bg-accent transform -translate-x-1/2"></div>
+                                <h5 class="text-lg font-semibold text-accent mb-2">Documentação e Gestão</h5>
+                                <p class="text-gray-300">Documentação detalhada de requisitos funcionais e não-funcionais, integrações, fluxos de dados e regras de negócio. Implementação de processo ágil para gestão de mudanças nos requisitos.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gráfico de Gantt do Cronograma -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8 bg-dark/50">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Cronograma do Projeto (Gantt)</span>
+                </h2>
+                
+                <div class="card-gradient border border-primary/20 rounded-xl p-6 mb-8">
+                    <div class="overflow-x-auto">
+                        <div class="min-w-[900px]">
+                            <!-- Cabeçalho do Gantt -->
+                            <div class="flex mb-4">
+                                <div class="w-1/4 pr-4">
+                                    <h4 class="font-semibold text-gray-300">Atividade</h4>
+                                </div>
+                                <div class="w-3/4 grid grid-cols-12 gap-1">
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 1</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 2</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 3</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 4</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 5</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 6</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 7</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 8</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 9</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 10</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 11</div>
+                                    <div class="text-center text-xs font-medium text-gray-400">Mês 12</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fase 1: Planejamento -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4">
+                                    <p class="font-medium text-primary">Fase 1: Planejamento</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-primary/70" style="width: 8.33%; margin-left: 0%;" data-label="1 mês"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Levantamento de Requisitos -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Levantamento de Requisitos</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-primary/50" style="width: 4.16%; margin-left: 0%;" data-label="2 sem"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Definição de Arquitetura -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Definição de Arquitetura</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-primary/50" style="width: 4.16%; margin-left: 4.16%;" data-label="2 sem"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fase 2: Desenvolvimento Core -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4">
+                                    <p class="font-medium text-accent">Fase 2: Desenvolvimento Core</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/70" style="width: 16.66%; margin-left: 8.33%;" data-label="2 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Backend -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Backend</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/50" style="width: 16.66%; margin-left: 8.33%;" data-label="2 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Frontend -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Frontend</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/50" style="width: 12.5%; margin-left: 12.5%;" data-label="1.5 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Integração com Câmeras -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Integração com Câmeras</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/50" style="width: 8.33%; margin-left: 16.66%;" data-label="1 mês"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fase 3: Testes e Otimização -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4">
+                                    <p class="font-medium text-primary">Fase 3: Testes e Otimização</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-primary/70" style="width: 12.5%; margin-left: 25%;" data-label="1.5 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Testes de Carga -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Testes de Carga</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-primary/50" style="width: 4.16%; margin-left: 25%;" data-label="2 sem"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Refinamento UX/UI -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Refinamento UX/UI</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-primary/50" style="width: 8.33%; margin-left: 29.16%;" data-label="1 mês"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fase 4: Piloto e Ajustes -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4">
+                                    <p class="font-medium text-accent">Fase 4: Piloto e Ajustes</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/70" style="width: 12.5%; margin-left: 37.5%;" data-label="1.5 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Implementação Piloto -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Implementação Piloto</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/50" style="width: 8.33%; margin-left: 37.5%;" data-label="1 mês"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Ajustes Finais -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Ajustes Finais</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-accent/50" style="width: 4.16%; margin-left: 45.83%;" data-label="2 sem"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fase 5: Expansão -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4">
+                                    <p class="font-medium text-secondary">Fase 5: Expansão</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-secondary/70" style="width: 50%; margin-left: 50%;" data-label="6 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Implementação em Escolas -->
+                            <div class="flex items-center mb-4">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Implementação em Escolas</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-secondary/50" style="width: 41.66%; margin-left: 50%;" data-label="5 meses"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Suporte e Manutenção -->
+                            <div class="flex items-center">
+                                <div class="w-1/4 pr-4 pl-4">
+                                    <p class="text-sm text-gray-300">Suporte e Manutenção</p>
+                                </div>
+                                <div class="w-3/4 relative">
+                                    <div class="gantt-bar bg-secondary/50" style="width: 50%; margin-left: 50%;" data-label="Contínuo"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                        <h3 class="text-xl font-semibold mb-4">Marcos do Projeto</h3>
+                        <ul class="space-y-3 text-gray-300">
+                            <li class="flex items-start">
+                                <div class="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                    <div class="w-3 h-3 rounded-full bg-primary"></div>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Aprovação do Escopo e Arquitetura</p>
+                                    <p class="text-sm text-gray-400">Final do Mês 1</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                    <div class="w-3 h-3 rounded-full bg-accent"></div>
+                                </div>
+                                <div>
+                                    <p class="font-medium">MVP Funcional</p>
+                                    <p class="text-sm text-gray-400">Final do Mês 3</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                    <div class="w-3 h-3 rounded-full bg-primary"></div>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Conclusão dos Testes de Carga</p>
+                                    <p class="text-sm text-gray-400">Meio do Mês 4</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                    <div class="w-3 h-3 rounded-full bg-accent"></div>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Lançamento Piloto</p>
+                                    <p class="text-sm text-gray-400">Início do Mês 5</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                    <div class="w-3 h-3 rounded-full bg-secondary"></div>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Início da Expansão</p>
+                                    <p class="text-sm text-gray-400">Mês 7</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                                    <div class="w-3 h-3 rounded-full bg-secondary"></div>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Conclusão da Primeira Onda de Implementação</p>
+                                    <p class="text-sm text-gray-400">Final do Mês 12</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                        <h3 class="text-xl font-semibold mb-4">Considerações do Cronograma</h3>
+                        <ul class="space-y-3 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span><strong>Paralelismo:</strong> Algumas atividades ocorrem simultaneamente para otimizar o tempo de entrega.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span><strong>Buffers:</strong> Períodos de contingência estão incorporados para absorver atrasos inesperados.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span><strong>Abordagem Iterativa:</strong> Desenvolvimento em sprints de 2 semanas com entregas incrementais.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span><strong>Revisões:</strong> Pontos de revisão e aprovação ao final de cada fase para garantir qualidade.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span><strong>Expansão Gradual:</strong> Implementação em ondas para permitir ajustes com base no feedback.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Roadmap Section -->
+        <section id="roadmap" class="py-16 px-4 sm:px-6 lg:px-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Roadmap do Projeto</span>
+                </h2>
+                
+                <div class="relative timeline-container py-8">
+                    <!-- Fase 1 -->
+                    <div class="timeline-item relative mb-16 md:mb-24">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="md:text-right md:pr-16 order-2 md:order-1">
+                                <h3 class="text-2xl font-bold text-primary mb-2">Fase 1: Planejamento</h3>
+                                <p class="text-gray-400 mb-2">Duração: 1 mês</p>
+                                <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                    <ul class="space-y-2 text-gray-300">
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Levantamento de requisitos com stakeholders</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Definição das APIs para comunicação com as câmeras</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Modelagem do banco de dados e arquitetura</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Setup de infraestrutura inicial</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="order-1 md:order-2 md:pl-16">
+                                <div class="w-full h-48 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/30">
+                                    <i class="fas fa-clipboard-list text-6xl text-primary/70"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fase 2 -->
+                    <div class="timeline-item relative mb-16 md:mb-24">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="md:pl-16 order-2">
+                                <h3 class="text-2xl font-bold text-accent mb-2">Fase 2: Desenvolvimento do Core</h3>
+                                <p class="text-gray-400 mb-2">Duração: 2 meses</p>
+                                <div class="card-gradient border border-accent/20 rounded-xl p-6">
+                                    <ul class="space-y-2 text-gray-300">
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Backend: Autenticação, APIs, banco de dados</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Frontend: Design e primeira versão das telas</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Integração com as câmeras e recebimento de eventos</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Implementação do sistema de notificações</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="order-1 md:pr-16 md:text-right">
+                                <div class="w-full h-48 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/30">
+                                    <i class="fas fa-code-branch text-6xl text-accent/70"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fase 3 -->
+                    <div class="timeline-item relative mb-16 md:mb-24">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="md:text-right md:pr-16 order-2 md:order-1">
+                                <h3 class="text-2xl font-bold text-primary mb-2">Fase 3: Testes e Otimização</h3>
+                                <p class="text-gray-400 mb-2">Duração: 1,5 mês</p>
+                                <div class="card-gradient border border-primary/20 rounded-xl p-6">
+                                    <ul class="space-y-2 text-gray-300">
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Testes de carga e segurança</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Refinamento do frontend e ajustes de UX/UI</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Correções de bugs e melhorias de performance</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                        <li class="flex items-start md:justify-end">
+                                            <span class="md:order-2">Otimização de algoritmos de reconhecimento</span>
+                                            <i class="fas fa-check-circle text-secondary mt-1 md:ml-2 mr-2 md:mr-0 md:order-1"></i>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="order-1 md:order-2 md:pl-16">
+                                <div class="w-full h-48 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/30">
+                                    <i class="fas fa-vial text-6xl text-primary/70"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fase 4 -->
+                    <div class="timeline-item relative">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="md:pl-16 order-2">
+                                <h3 class="text-2xl font-bold text-accent mb-2">Fase 4: Piloto e Ajustes Finais</h3>
+                                <p class="text-gray-400 mb-2">Duração: 1,5 mês</p>
+                                <div class="card-gradient border border-accent/20 rounded-xl p-6">
+                                    <ul class="space-y-2 text-gray-300">
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Implementação em escolas piloto</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Coleta de feedbacks e ajustes finais</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Preparação para escalabilidade</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-secondary mt-1 mr-2"></i>
+                                            <span>Treinamento da equipe de suporte e documentação</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="order-1 md:pr-16 md:text-right">
+                                <div class="w-full h-48 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/30">
+                                    <i class="fas fa-rocket text-6xl text-accent/70"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Budget Section -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8 bg-dark/50">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Orçamento Estimado</span>
+                </h2>
+                
+                <!-- Tabs -->
+                <div class="flex justify-center mb-8">
+                    <div class="inline-flex rounded-md bg-gray-800/50 p-1">
+                        <button id="tab-standard" class="px-4 py-2 rounded-md text-sm font-medium tab-active">Orçamento Padrão</button>
+                        <button id="tab-risk" class="px-4 py-2 rounded-md text-sm font-medium text-gray-400">Orçamento de Risco</button>
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Orçamento Padrão -->
+                <div id="content-standard" class="tab-content active">
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gradient-to-r from-primary/20 to-accent/20 border-b border-gray-700">
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Item</th>
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Quantidade</th>
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Custo Mensal</th>
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Total (6 meses)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Tech Lead</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 3.000</td>
+                                    <td class="py-3 px-4">R$ 18.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Backend Developers</td>
+                                    <td class="py-3 px-4">3</td>
+                                    <td class="py-3 px-4">R$ 4.000</td>
+                                    <td class="py-3 px-4">R$ 72.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Frontend Developers</td>
+                                    <td class="py-3 px-4">3</td>
+                                    <td class="py-3 px-4">R$ 3.000</td>
+                                    <td class="py-3 px-4">R$ 54.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">DevOps</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 2.000</td>
+                                    <td class="py-3 px-4">R$ 12.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">QA Engineers</td>
+                                    <td class="py-3 px-4">2</td>
+                                    <td class="py-3 px-4">R$ 2.000</td>
+                                    <td class="py-3 px-4">R$ 24.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Product Owner</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 6.000 - R$ 8.000</td>
+                                    <td class="py-3 px-4">R$ 36.000 - R$ 48.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Scrum Master</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 3.000 - R$ 5.000</td>
+                                    <td class="py-3 px-4">R$ 18.000 - R$ 30.000</td>
+                                </tr>
+                                <tr class="bg-gradient-to-r from-primary/10 to-accent/10 font-semibold">
+                                    <td class="py-3 px-4">Total Estimado</td>
+                                    <td class="py-3 px-4">12</td>
+                                    <td class="py-3 px-4">R$ 23.000 - R$ 27.000</td>
+                                    <td class="py-3 px-4">R$ 234.000 - R$ 258.000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-8 p-6 card-gradient border border-primary/20 rounded-xl">
+                        <h3 class="text-xl font-semibold mb-4">Observações Orçamentárias</h3>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span>Os valores podem variar de acordo com a experiência dos profissionais e região</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span>Custos de infraestrutura (servidores, armazenamento) não estão incluídos</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span>Licenças de software e ferramentas devem ser consideradas à parte</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle text-primary mt-1 mr-2"></i>
+                                <span>Recomenda-se uma reserva de contingência de 15% sobre o valor total</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Orçamento de Risco -->
+                <div id="content-risk" class="tab-content">
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gradient-to-r from-primary/20 to-accent/20 border-b border-gray-700">
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Item</th>
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Quantidade</th>
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Custo Mensal</th>
+                                    <th class="py-3 px-4 text-left text-sm font-semibold">Total (6 meses)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Tech Lead</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 3.000</td>
+                                    <td class="py-3 px-4">R$ 18.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Backend Developers</td>
+                                    <td class="py-3 px-4">2</td>
+                                    <td class="py-3 px-4">R$ 4.000</td>
+                                    <td class="py-3 px-4">R$ 48.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Frontend Developers</td>
+                                    <td class="py-3 px-4">2</td>
+                                    <td class="py-3 px-4">R$ 3.000</td>
+                                    <td class="py-3 px-4">R$ 36.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">DevOps</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 2.000</td>
+                                    <td class="py-3 px-4">R$ 12.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">QA Engineer</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 2.000</td>
+                                    <td class="py-3 px-4">R$ 12.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Product Owner</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 6.000 - R$ 8.000</td>
+                                    <td class="py-3 px-4">R$ 36.000 - R$ 48.000</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                                    <td class="py-3 px-4">Scrum Master</td>
+                                    <td class="py-3 px-4">1</td>
+                                    <td class="py-3 px-4">R$ 3.000 - R$ 5.000</td>
+                                    <td class="py-3 px-4">R$ 18.000 - R$ 30.000</td>
+                                </tr>
+                                <tr class="bg-gradient-to-r from-primary/10 to-accent/10 font-semibold">
+                                    <td class="py-3 px-4">Total Estimado</td>
+                                    <td class="py-3 px-4">9</td>
+                                    <td class="py-3 px-4">R$ 18.000 - R$ 22.000</td>
+                                    <td class="py-3 px-4">R$ 180.000 - R$ 204.000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-8 p-6 card-gradient border border-accent/20 rounded-xl">
+                        <h3 class="text-xl font-semibold mb-4">Análise de Risco</h3>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-accent mt-1 mr-2"></i>
+                                <span><strong>Risco de Prazo:</strong> Com equipe reduzida, o cronograma pode estender-se em 30-40%</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-accent mt-1 mr-2"></i>
+                                <span><strong>Risco de Qualidade:</strong> Menos recursos para testes e QA podem resultar em mais bugs em produção</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-accent mt-1 mr-2"></i>
+                                <span><strong>Risco de Escopo:</strong> Possível necessidade de reduzir funcionalidades ou adiar entregas secundárias</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-accent mt-1 mr-2"></i>
+                                <span><strong>Mitigação:</strong> Recomenda-se reserva de contingência de 25% e priorização rigorosa de requisitos</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documentation Section -->
+        <section class="py-16 px-4 sm:px-6 lg:px-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold mb-12 text-center">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Artefatos e Documentação</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-file-code text-primary text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-center mb-4">Swagger/OpenAPI</h3>
+                        <p class="text-gray-300 text-center">Documentação completa das APIs com endpoints, parâmetros e respostas</p>
+                    </div>
+                    
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-project-diagram text-accent text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-center mb-4">C4 Model</h3>
+                        <p class="text-gray-300 text-center">Modelagem da arquitetura em diferentes níveis de abstração</p>
+                    </div>
+                    
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-sitemap text-secondary text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-center mb-4">Diagramas de Fluxo</h3>
+                        <p class="text-gray-300 text-center">Fluxos de eventos e comunicação entre os módulos do sistema</p>
+                    </div>
+                    
+                    <div class="card-gradient border border-primary/20 rounded-xl p-6 hover:glow transition duration-300">
+                        <div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-clipboard-list text-primary text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-center mb-4">Especificação de Requisitos</h3>
+                        <p class="text-gray-300 text-center">Requisitos funcionais e não funcionais detalhados</p>
+                    </div>
+                </div>
+                
+                <div class="mt-12 card-gradient border border-accent/20 rounded-xl p-8">
+                    <h3 class="text-2xl font-semibold mb-6 text-center">Benefícios do Projeto</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="flex flex-col items-center text-center p-4">
+                            <div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                                <i class="fas fa-shield-alt text-primary text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-semibold mb-2">Segurança Aprimorada</h4>
+                            <p class="text-gray-300">Monitoramento em tempo real da presença de alunos, garantindo maior segurança no ambiente escolar</p>
+                        </div>
+                        
+                        <div class="flex flex-col items-center text-center p-4">
+                            <div class="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mb-4">
+                                <i class="fas fa-chart-line text-accent text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-semibold mb-2">Dados Analíticos</h4>
+                            <p class="text-gray-300">Relatórios detalhados sobre frequência e padrões de presença para tomada de decisões</p>
+                        </div>
+                        
+                        <div class="flex flex-col items-center text-center p-4">
+                            <div class="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mb-4">
+                                <i class="fas fa-clock text-secondary text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-semibold mb-2">Eficiência Operacional</h4>
+                            <p class="text-gray-300">Automação do processo de chamada e controle de presença, reduzindo carga administrativa</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-12 px-4 sm:px-6 lg:px-8 bg-dark border-t border-gray-800">
+            <div class="container mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-6 md:mb-0">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 relative mr-3">
+                                <div class="absolute inset-0 logo-shield bg-gradient-to-br from-primary to-accent opacity-20"></div>
+                                <div class="absolute inset-0 logo-shield bg-dark/80 border-2 border-accent/50 flex items-center justify-center">
+                                    <span class="font-bold text-sm bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">PL</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">PacSafe Labs</h2>
+                                <p class="text-gray-400 text-sm">Monitoramento de Presença Escolar</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-6">
+                        <a href="#" class="text-gray-400 hover:text-primary transition duration-300">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition duration-300">
+                            <i class="fab fa-linkedin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition duration-300">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
+                    <p>&copy; 2025 PacSafe Labs. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordModal = document.getElementById('passwordModal');
+            const mainContent = document.getElementById('mainContent');
+            const passwordInput = document.getElementById('password');
+            const submitPassword = document.getElementById('submitPassword');
+            const passwordError = document.getElementById('passwordError');
+            
+            const correctPassword = 'pacsafeedu2025';
+            
+            // Check if password is already verified in session storage
+            if (sessionStorage.getItem('passwordVerified') === 'true') {
+                passwordModal.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+            }
+            
+            submitPassword.addEventListener('click', checkPassword);
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+            
+            function checkPassword() {
+                if (passwordInput.value === correctPassword) {
+                    passwordModal.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    sessionStorage.setItem('passwordVerified', 'true');
+                } else {
+                    passwordError.classList.remove('hidden');
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    
+                    // Shake animation for error
+                    passwordInput.classList.add('border-red-500');
+                    setTimeout(() => {
+                        passwordInput.classList.remove('border-red-500');
+                    }, 1000);
+                }
+            }
+            
+            // Tab functionality for budget section
+            const tabStandard = document.getElementById('tab-standard');
+            const tabRisk = document.getElementById('tab-risk');
+            const contentStandard = document.getElementById('content-standard');
+            const contentRisk = document.getElementById('content-risk');
+            
+            tabStandard.addEventListener('click', function() {
+                tabStandard.classList.add('tab-active');
+                tabStandard.classList.remove('text-gray-400');
+                tabRisk.classList.remove('tab-active');
+                tabRisk.classList.add('text-gray-400');
+                
+                contentStandard.classList.add('active');
+                contentRisk.classList.remove('active');
+            });
+            
+            tabRisk.addEventListener('click', function() {
+                tabRisk.classList.add('tab-active');
+                tabRisk.classList.remove('text-gray-400');
+                tabStandard.classList.remove('tab-active');
+                tabStandard.classList.add('text-gray-400');
+                
+                contentRisk.classList.add('active');
+                contentStandard.classList.remove('active');
+            });
+            
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+          // Elementos de input
+          const ec2Cost = document.getElementById('ec2-cost');
+          const rdsCost = document.getElementById('rds-cost');
+          const s3Cost = document.getElementById('s3-cost');
+          const cdnCost = document.getElementById('cdn-cost');
+          const cacheCost = document.getElementById('cache-cost');
+          const transferCost = document.getElementById('transfer-cost');
+          const softwarePrice = document.getElementById('software-price');
+          
+          // Elementos de display
+          const ec2Value = document.getElementById('ec2-value');
+          const rdsValue = document.getElementById('rds-value');
+          const s3Value = document.getElementById('s3-value');
+          const cdnValue = document.getElementById('cdn-value');
+          const cacheValue = document.getElementById('cache-value');
+          const transferValue = document.getElementById('transfer-value');
+          
+          const totalCostPerSchool = document.getElementById('total-cost-per-school');
+          const totalRevenue = document.getElementById('total-revenue');
+          const totalInfraCost = document.getElementById('total-infra-cost');
+          const teamCostNormal = document.getElementById('team-cost-normal');
+          const monthlyProfit = document.getElementById('monthly-profit');
+          
+          const profit3Months = document.getElementById('profit-3-months');
+          const profit6Months = document.getElementById('profit-6-months');
+          const profit12Months = document.getElementById('profit-12-months');
+          const riskScenarioProfit = document.getElementById('risk-scenario-profit');
+          
+          const breakEven = document.getElementById('break-even');
+          const marketPercentage = document.getElementById('market-percentage');
+          const roiNormal = document.getElementById('roi-normal');
+          const roiRisk = document.getElementById('roi-risk');
+          const recommendation = document.getElementById('recommendation');
+          
+          const normalMonthlyProfit = document.getElementById('normal-monthly-profit');
+          const riskMonthlyProfit = document.getElementById('risk-monthly-profit');
+          
+          // Constantes
+          const TOTAL_SCHOOLS = 5300;
+          const TEAM_COST_NORMAL = 25000;
+          const TEAM_COST_RISK = 20000;
+          const LICENSE_COST = 100; // Custo fixo da licença
+          
+          // Função para atualizar todos os cálculos
+          function updateCalculations() {
+              // Obter valores atuais
+              const ec2Value = parseInt(ec2Cost.value);
+              const rdsValue = parseInt(rdsCost.value);
+              const s3Value = parseInt(s3Cost.value);
+              const cdnValue = parseInt(cdnCost.value);
+              const cacheValue = parseInt(cacheCost.value);
+              const transferValue = parseInt(transferCost.value);
+              const softwarePriceValue = parseInt(softwarePrice.value);
+              
+              // Atualizar displays de valores
+              document.getElementById('ec2-value').textContent = `R$ ${ec2Value}`;
+              document.getElementById('rds-value').textContent = `R$ ${rdsValue}`;
+              document.getElementById('s3-value').textContent = `R$ ${s3Value}`;
+              document.getElementById('cdn-value').textContent = `R$ ${cdnValue}`;
+              document.getElementById('cache-value').textContent = `R$ ${cacheValue}`;
+              document.getElementById('transfer-value').textContent = `R$ ${transferValue}`;
+              
+              // Calcular custo total por escola
+              const infraCostPerSchool = ec2Value + rdsValue + s3Value + cdnValue + cacheValue + transferValue + LICENSE_COST;
+              totalCostPerSchool.textContent = `R$ ${infraCostPerSchool}`;
+              
+              // Calcular receita total
+              const totalRevenueValue = TOTAL_SCHOOLS * softwarePriceValue;
+              totalRevenue.textContent = `R$ ${totalRevenueValue.toLocaleString('pt-BR')}`;
+              
+              // Calcular custo de infraestrutura total
+              const totalInfraCostValue = TOTAL_SCHOOLS * infraCostPerSchool;
+              totalInfraCost.textContent = `R$ ${totalInfraCostValue.toLocaleString('pt-BR')}`;
+              
+              // Exibir custo da equipe
+              teamCostNormal.textContent = `R$ ${TEAM_COST_NORMAL.toLocaleString('pt-BR')}`;
+              
+              // Calcular lucro mensal
+              const monthlyProfitValue = totalRevenueValue - totalInfraCostValue - TEAM_COST_NORMAL;
+              monthlyProfit.textContent = `R$ ${monthlyProfitValue.toLocaleString('pt-BR')}`;
+              
+              // Atualizar cor do lucro mensal
+              if (monthlyProfitValue >= 0) {
+                  monthlyProfit.classList.remove('text-red-400');
+                  monthlyProfit.classList.add('text-green-400');
+              } else {
+                  monthlyProfit.classList.remove('text-green-400');
+                  monthlyProfit.classList.add('text-red-400');
+              }
+              
+              // Calcular projeções
+              const profit3MonthsValue = monthlyProfitValue * 3;
+              const profit6MonthsValue = monthlyProfitValue * 6;
+              const profit12MonthsValue = monthlyProfitValue * 12;
+              
+              profit3Months.textContent = `R$ ${profit3MonthsValue.toLocaleString('pt-BR')}`;
+              profit6Months.textContent = `R$ ${profit6MonthsValue.toLocaleString('pt-BR')}`;
+              profit12Months.textContent = `R$ ${profit12MonthsValue.toLocaleString('pt-BR')}`;
+              
+              // Calcular cenário de risco
+              const riskScenarioProfitValue = totalRevenueValue - totalInfraCostValue - TEAM_COST_RISK;
+              riskScenarioProfit.textContent = `R$ ${riskScenarioProfitValue.toLocaleString('pt-BR')}/mês`;
+              
+              // Calcular ponto de equilíbrio
+              const costPerSchool = infraCostPerSchool;
+              const breakEvenValue = Math.ceil((TEAM_COST_NORMAL) / (softwarePriceValue - costPerSchool));
+              breakEven.textContent = `${breakEvenValue.toLocaleString('pt-BR')} escolas`;
+              
+              // Calcular percentual do mercado
+              const marketPercentageValue = (breakEvenValue / TOTAL_SCHOOLS) * 100;
+              marketPercentage.textContent = `${marketPercentageValue.toFixed(1)}%`;
+              
+              // Calcular ROI
+              const investmentNormal = TEAM_COST_NORMAL + totalInfraCostValue;
+              const roiNormalValue = (monthlyProfitValue / investmentNormal) * 100;
+              roiNormal.textContent = `${roiNormalValue.toFixed(1)}%`;
+              
+              const investmentRisk = TEAM_COST_RISK + totalInfraCostValue;
+              const roiRiskValue = (riskScenarioProfitValue / investmentRisk) * 100;
+              roiRisk.textContent = `${roiRiskValue.toFixed(1)}%`;
+              
+              // Atualizar cores do ROI
+              if (roiNormalValue >= 0) {
+                  roiNormal.classList.remove('text-red-400');
+                  roiNormal.classList.add('text-green-400');
+              } else {
+                  roiNormal.classList.remove('text-green-400');
+                  roiNormal.classList.add('text-red-400');
+              }
+              
+              if (roiRiskValue >= 0) {
+                  roiRisk.classList.remove('text-red-400');
+                  roiRisk.classList.add('text-green-400');
+              } else {
+                  roiRisk.classList.remove('text-green-400');
+                  roiRisk.classList.add('text-red-400');
+              }
+              
+              // Atualizar recomendação
+              if (monthlyProfitValue >= 0) {
+                  recommendation.innerHTML = '<strong>Recomendação:</strong> O projeto é financeiramente viável com os parâmetros atuais. Considere iniciar com um piloto em algumas escolas para validar as premissas de custo e receita.';
+              } else if (marketPercentageValue <= 100) {
+                  recommendation.innerHTML = '<strong>Recomendação:</strong> O projeto pode ser viável se atingir ' + breakEvenValue + ' escolas (' + marketPercentageValue.toFixed(1) + '% do mercado de SP). Considere uma estratégia de entrada gradual no mercado.';
+              } else {
+                  recommendation.innerHTML = '<strong>Recomendação:</strong> Com o preço atual, o projeto não é financeiramente viável. Considere aumentar o preço do software para pelo menos R$' + (costPerSchool + Math.ceil(TEAM_COST_NORMAL/TOTAL_SCHOOLS) + 10) + ', reduzir custos de infraestrutura ou buscar um mercado maior que São Paulo.';
+              }
+              
+              // Atualizar comparação de cenários
+              normalMonthlyProfit.textContent = `R$ ${monthlyProfitValue.toLocaleString('pt-BR')}`;
+              riskMonthlyProfit.textContent = `R$ ${riskScenarioProfitValue.toLocaleString('pt-BR')}`;
+          }
+          
+          // Adicionar event listeners para todos os inputs
+          ec2Cost.addEventListener('input', updateCalculations);
+          rdsCost.addEventListener('input', updateCalculations);
+          s3Cost.addEventListener('input', updateCalculations);
+          cdnCost.addEventListener('input', updateCalculations);
+          cacheCost.addEventListener('input', updateCalculations);
+          transferCost.addEventListener('input', updateCalculations);
+          softwarePrice.addEventListener('input', updateCalculations);
+          
+          // Inicializar cálculos
+          updateCalculations();
+      });
+
+
+    </script>
+</body>
+</html>
+
